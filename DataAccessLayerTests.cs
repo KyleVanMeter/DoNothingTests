@@ -35,5 +35,20 @@ namespace DoNothing.Tests
                 new object[] { new TimeSpan(0,0,8), "0:08" },
                 new object[] { new TimeSpan(1,8,7), "1:08:07"}
             };
+
+        [Trait("DataAccessLayer", "GetAlbumArt simple")]
+        [Theory]
+        [InlineData(@"testDir", null)]
+        public void GetAlbumArtTest(string folder, string expected)
+        {
+            System.IO.DirectoryInfo dir = new System.IO.DirectoryInfo(folder);
+            Assert.Equal(dir.Exists.ToString(), false.ToString());
+
+            var comp = new DataAccessLayer();
+
+            var result = comp.GetAlbumArt(folder);
+
+            Assert.Equal(expected, result);
+        }
     }
 }

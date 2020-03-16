@@ -36,13 +36,23 @@ namespace DoNothing.Tests
                 new object[] { new TimeSpan(1,8,7), "1:08:07"}
             };
 
+        /// <summary>
+        /// GetAlbumArt takes a directory, looks for files with usable file extentions,
+        /// and returns the full file path to the largest image file in the directory
+        /// </summary>
+        /// <param name="folder"></param>
+        /// <param name="expected"></param>
         [Trait("DataAccessLayer", "GetAlbumArt simple")]
         [Theory]
         [InlineData(@"testDir", null)]
+        [InlineData(null, null)]
         public void GetAlbumArtTest(string folder, string expected)
         {
-            System.IO.DirectoryInfo dir = new System.IO.DirectoryInfo(folder);
-            Assert.Equal(dir.Exists.ToString(), false.ToString());
+            if (!(folder is null))
+            {
+                System.IO.DirectoryInfo dir = new System.IO.DirectoryInfo(folder);
+                Assert.Equal(dir.Exists.ToString(), false.ToString());
+            }
 
             var comp = new DataAccessLayer();
 

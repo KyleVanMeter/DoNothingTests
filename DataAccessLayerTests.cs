@@ -1,6 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
+using System.Reflection;
+
 using Xunit;
+using System.IO.Abstractions;
 using test02.Models;
 
 namespace DoNothing.Tests
@@ -57,6 +61,30 @@ namespace DoNothing.Tests
             var comp = new DataAccessLayer();
 
             var result = comp.GetAlbumArt(folder);
+
+            Assert.Equal(expected, result);
+        }
+
+        [Trait("DataAccessLayer", "GetAlbumArt ext")]
+        [Theory]
+        [InlineData("unused", null)]
+        public void GetAlbumArtTestExt(string folder, string expected)
+        {
+            string path = System.IO.Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
+            string dirName = @"testDir";
+
+            System.IO.DirectoryInfo dir = new System.IO.DirectoryInfo(Path.Combine(path, dirName));
+            if (dir.Exists)
+            {
+                dir.Delete();
+            }
+
+            dir.Create();
+
+            var comp = new DataAccessLayer();
+
+            var result = comp.GetAlbumArt(Path.Combine(path, dirName));
+            dir.Delete();
 
             Assert.Equal(expected, result);
         }

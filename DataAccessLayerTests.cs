@@ -11,6 +11,17 @@ using test02.Models;
 
 namespace DoNothing.Tests
 {
+    public class MockFileInfo
+    {
+        public MockFileInfo(string fn, string mc)
+        {
+            fileName = fn;
+            mockContents = mc;
+        }
+        public string fileName { get; set; }
+        public string mockContents { get; set; }
+    }
+
     public class DataAccessLayerTests
     {
         private readonly Xunit.Abstractions.ITestOutputHelper _testOutput;
@@ -76,41 +87,23 @@ namespace DoNothing.Tests
             Assert.Equal(expected, result);
         }
 
-        [Trait("DataAccessLayer", "GetAlbumArt ext")]
+        /// <summary>
+        /// This unit test is meant to test if GetAlbumArt is finding the right types of files
+        /// with the right names, and prioritizing selecting files with larger file sizes for
+        /// cover art
+        /// </summary>
+        /// <param name="fileInfos"></param>
+        /// <param name="expected"></param>
+        [Trait("DataAccessLayer", "GetAlbumArt Param Ext Test")]
         [Theory]
-        [InlineData("unused", null)]
-        public void GetAlbumArtTestExt(string folder, string expected)
+        [MemberData(nameof(GetAlbumArtFileData))]
+        public void GetAlbumArtParamExtTest(List<MockFileInfo> fileInfos, string expected)
         {
             string path = CurrentDir;
             string dirName = @"testDir";
-
             System.IO.DirectoryInfo dir = new System.IO.DirectoryInfo(Path.Combine(path, dirName));
-            if (dir.Exists)
-            {
-                dir.Delete();
-            }
 
-            dir.Create();
-
-            var comp = new DataAccessLayer();
-
-            var result = comp.GetAlbumArt(Path.Combine(path, dirName));
-            dir.Delete();
-
-            Assert.Equal(expected, result);
-        }
-
-        [Trait("DataAccessLayer", "GetAblumArt Ext2")]
-        [Fact]
-        public void GetAlbumArtTestExt2()
-        {
-            string path = CurrentDir;
-            string dirName = @"testDir";
-
-            System.IO.DirectoryInfo dir = new System.IO.DirectoryInfo(Path.Combine(path, dirName));
-            string expected = dir.FullName + @"\cover.jpg";
-
-            if (dir.Exists)
+            if(dir.Exists)
             {
                 dir.Delete();
             }
@@ -119,14 +112,18 @@ namespace DoNothing.Tests
 
             try
             {
-                using (FileStream fs = File.Create(dir.FullName + @"\cover.jpg"))
+                foreach(MockFileInfo mockFile in fileInfos)
                 {
-                    byte[] info = new UTF8Encoding(true).GetBytes("test");
-                    fs.Write(info, 0, info.Length);
+                    using(FileStream fs = File.Create(dir.FullName + @"\" + mockFile.fileName))
+                    {
+                        byte[] info = new UTF8Encoding(true).GetBytes(mockFile.mockContents);
+                        fs.Write(info, 0, info.Length);
+                        _testOutput.WriteLine(mockFile.fileName + ": " + info.Length.ToString());
+                    }
                 }
-            } catch (Exception e)
+            } catch (Exception ex)
             {
-                _testOutput.WriteLine("File creation failed with exception: " + e.ToString());
+                _testOutput.WriteLine("File creation failed with expection: " + ex.ToString());
             }
 
             var comp = new DataAccessLayer();
@@ -141,8 +138,18 @@ namespace DoNothing.Tests
         public static IEnumerable<object[]> GetAlbumArtFileData =>
             new List<object[]>
             {
-                new object[] { @"\cover.jpg", System.IO.Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location).EndsWith("cover.jpg") },
-                new object[] { new TimeSpan(1,8,7), "1:08:07"}
+                new object[] { new List<MockFileInfo>() { new MockFileInfo("cover.jpg", "aaaa") }, 
+                    System.IO.Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location) + @"\testDir\cover.jpg" },
+                new object[] { new List<MockFileInfo>() { new MockFileInfo("no.txt", "notext"),
+                                                          new MockFileInfo("no.jpg", "wrongfile"),
+                                                          new MockFileInfo("cover.jpg", "a") },
+                    System.IO.Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location) + @"\testDir\cover.jpg" },
+                new object[] { new List<MockFileInfo>() { new MockFileInfo("no.txt", "notext"),
+                                                          new MockFileInfo("cover.png", "yesfileaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"),
+                                                          new MockFileInfo("cover.gif", "") },
+                     System.IO.Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location) + @"\testDir\cover.png" },
+                new object[] { new List<MockFileInfo>() { },
+                    null }
             };
     }
 }

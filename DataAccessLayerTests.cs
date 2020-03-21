@@ -5,12 +5,18 @@ using System.Text;
 using System.Reflection;
 
 using Xunit;
+using TagLib;
 using System.IO.Abstractions;
 using System.IO.Abstractions.TestingHelpers;
 using test02.Models;
 
 namespace DoNothing.Tests
 {
+    public static class Utility
+    {
+        public static void Fail(string msg) =>
+            throw new Xunit.Sdk.XunitException(msg);
+    }
     public class MockFileInfo
     {
         public MockFileInfo(string fn, string mc)
@@ -24,6 +30,7 @@ namespace DoNothing.Tests
 
     public class DataAccessLayerTests
     {
+
         private readonly Xunit.Abstractions.ITestOutputHelper _testOutput;
 
         public DataAccessLayerTests(Xunit.Abstractions.ITestOutputHelper _testOutput)
@@ -39,7 +46,7 @@ namespace DoNothing.Tests
         /// </summary>
         /// <param name="time"></param>
         /// <param name="expected"></param>
-        [Trait("DataAccessLayer", "ConvertTime Simple")]
+        [Trait("DataAccessLayer", "ConvertTime")]
         [Theory]
         [MemberData(nameof(TimeSpanData))]
         public void ConvertTimeTest(TimeSpan time, string expected)
@@ -68,7 +75,7 @@ namespace DoNothing.Tests
         /// </summary>
         /// <param name="folder"></param>
         /// <param name="expected"></param>
-        [Trait("DataAccessLayer", "GetAlbumArt simple")]
+        [Trait("DataAccessLayer", "GetAlbumArt")]
         [Theory]
         [InlineData(@"testDir", null)]
         [InlineData(null, null)]
@@ -94,7 +101,7 @@ namespace DoNothing.Tests
         /// </summary>
         /// <param name="fileInfos"></param>
         /// <param name="expected"></param>
-        [Trait("DataAccessLayer", "GetAlbumArt Param Ext Test")]
+        [Trait("DataAccessLayer", "GetAlbumArt")]
         [Theory]
         [MemberData(nameof(GetAlbumArtFileData))]
         public void GetAlbumArtParamExtTest(List<MockFileInfo> fileInfos, string expected)
@@ -114,7 +121,7 @@ namespace DoNothing.Tests
             {
                 foreach(MockFileInfo mockFile in fileInfos)
                 {
-                    using(FileStream fs = File.Create(dir.FullName + @"\" + mockFile.fileName))
+                    using(FileStream fs = System.IO.File.Create(dir.FullName + @"\" + mockFile.fileName))
                     {
                         byte[] info = new UTF8Encoding(true).GetBytes(mockFile.mockContents);
                         fs.Write(info, 0, info.Length);
@@ -151,5 +158,27 @@ namespace DoNothing.Tests
                 new object[] { new List<MockFileInfo>() { },
                     null }
             };
+
+        /// <summary>
+        /// This unit test is meant to see if we can find base64 encoded album art
+        /// in a file.  No file mocking is done at the moment, so a valid .mp3 file
+        /// must be present
+        /// </summary>
+        [Trait("DataAccessLayer", "GetEmbedAlbumArt")]
+        [Fact]
+        public void GetEmbedAlbumArtTest()
+        {
+            string fileName = @"\embeddedart.mp3";
+            string path = CurrentDir + fileName;
+            if (!System.IO.File.Exists(path))
+            {
+                Utility.Fail($"Cannot find file \"{fileName}\"");
+            }
+
+            TagLib.File file = TagLib.File.Create(path);
+
+            TagLib.IPicture[] pics = file.Tag.Pictures;
+            Assert.True(pics.Length > 0 ? true : false);
+        }
     }
 }
